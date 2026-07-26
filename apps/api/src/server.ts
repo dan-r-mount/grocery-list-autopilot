@@ -37,6 +37,8 @@ import {
   saveDemoSession,
   startConnect,
 } from "./sainsburys/connect.js";
+import { parseCookieInput } from "./sainsburys/cookie-parse.js";
+import { createDevicePair, consumeDevicePair } from "./sainsburys/device-pair.js";
 import { probeSainsburysReachability } from "./sainsburys/probe.js";
 
 const services = await createDefaultServices();
@@ -231,17 +233,51 @@ app.post("/api/sainsburys/import-cookies", async (c) => {
     requireUser(c);
     const body = await c.req.json<{
       passphrase: string;
-      cookies: Array<{
-        name: string;
-        value: string;
-        domain?: string;
-        path?: string;
-        expires?: number;
-        httpOnly?: boolean;
-        secure?: boolean;
-      }>;
+      cookies?: unknown;
+      cookieText?: string;
     }>();
-    const session = importCookiesToVault(body.cookies ?? [], body.passphrase ?? "");
+    const cookies = body.cookieText
+      ? parseCookieInput(body.cookieText)
+      : parseCookieInput(JSON.stringify(body.cookies ?? []));
+    const session = importCookiesToVault(cookies, body.passphrase ?? "");
+    return c.json({ ok: true, session, status: vaultStatus() });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 400);
+  }
+});
+
+app.post("/api/sainsburys/device-pair", (c) => {
+  try {
+    const user = requireUser(c);
+    const pair = createDevicePair(user.userId);
+    return c.json({
+      pair,
+      message:
+        "Open Session Saver (or the in-page saver), enter this code, log into Sainsbury’s, then tap Save.",
+    });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 401);
+  }
+});
+
+/** Used by the Pixel Session Saver WebView app — authenticated by pair code, not browser cookies. */
+app.post("/api/sainsburys/device-pair/import", async (c) => {
+  try {
+    const body = await c.req.json<{
+      code: string;
+      passphrase: string;
+      cookieText?: string;
+      cookies?: unknown;
+    }>();
+    consumeDevicePair(body.code ?? "");
+    const cookies = body.cookieText
+      ? parseCookieInput(body.cookieText)
+      : parseCookieInput(JSON.stringify(body.cookies ?? []));
+    const session = importCookiesToVault(
+      cookies,
+      body.passphrase ?? "",
+      "Sainsbury's (Pixel Session Saver)",
+    );
     return c.json({ ok: true, session, status: vaultStatus() });
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : String(err) }, 400);

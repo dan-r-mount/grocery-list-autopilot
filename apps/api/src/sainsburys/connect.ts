@@ -232,8 +232,9 @@ export async function closeConnect(id: string) {
 export function importCookiesToVault(
   cookies: SainsburysSession["cookies"],
   passphrase: string,
+  label = "Sainsbury's (phone cookie import)",
 ) {
-  const session = cookiesToSession(cookies, "Sainsbury's (phone cookie import)");
+  const session = cookiesToSession(cookies, label);
   assertSessionLooksLoggedIn(session);
   saveSessionWithPassphrase(session, passphrase);
   return redactSession(session);
@@ -262,11 +263,20 @@ function assertSessionLooksLoggedIn(session: SainsburysSession) {
   }
   const names = session.cookies.map((c) => c.name.toLowerCase());
   const hasAuth = names.some(
-    (n) => n.includes("wc_authentication") || n === "wcauthtoken" || n.includes("auth"),
+    (n) =>
+      n.includes("wc_authentication") ||
+      n === "wcauthtoken" ||
+      n.includes("authentication") ||
+      n.includes("wcrememberme") ||
+      n.includes("auth"),
   );
-  if (!hasAuth) {
+  // Akamai + session cookies alone are not enough, but some exports rename fields.
+  const hasSessionShape =
+    names.some((n) => n.includes("aka") || n.includes("bm_")) &&
+    names.length >= 5;
+  if (!hasAuth && !hasSessionShape) {
     throw new Error(
-      "Cookies do not look like a logged-in Sainsbury’s session (missing auth cookie). Log in fully on your phone, then export cookies again.",
+      "These cookies don’t look like a logged-in Sainsbury’s session. Stay logged in, then export again (include httpOnly cookies) or use the Session Saver app.",
     );
   }
 }

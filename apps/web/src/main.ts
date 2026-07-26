@@ -396,34 +396,25 @@ async function importPhoneCookies() {
     render();
     return;
   }
-  let cookies: unknown;
-  try {
-    cookies = JSON.parse(state.cookieJson);
-  } catch {
-    throw new Error("Cookie JSON is not valid JSON");
-  }
-  if (!Array.isArray(cookies)) {
-    // Cookie-Editor sometimes wraps as { cookies: [...] } or a map
-    if (cookies && typeof cookies === "object" && Array.isArray((cookies as { cookies?: unknown }).cookies)) {
-      cookies = (cookies as { cookies: unknown[] }).cookies;
-    } else if (cookies && typeof cookies === "object") {
-      cookies = Object.entries(cookies as Record<string, string>).map(([name, value]) => ({
-        name,
-        value,
-        domain: ".sainsburys.co.uk",
-        path: "/",
-      }));
-    } else {
-      throw new Error("Cookie JSON must be an array of {name, value, domain} objects");
-    }
-  }
   await api("/api/sainsburys/import-cookies", {
     method: "POST",
-    body: JSON.stringify({ passphrase: state.vaultPassphrase, cookies }),
+    body: JSON.stringify({
+      passphrase: state.vaultPassphrase,
+      cookieText: state.cookieJson,
+    }),
   });
   state.cookieJson = "";
   state.message = "Sainsbury’s session imported from your phone and encrypted in the vault.";
   await refreshAll();
+}
+
+async function createPairCode() {
+  const result = await api<{ pair: { code: string; expiresAt: number }; message: string }>(
+    "/api/sainsburys/device-pair",
+    { method: "POST", body: "{}" },
+  );
+  state.message = `Pair code ${result.pair.code} — open Session Saver, enter this code + your passphrase, log into Sainsbury’s, tap Save session.`;
+  render();
 }
 
 async function testNotify() {
@@ -569,18 +560,20 @@ function renderApp() {
       </div>
 
       <h3 class="subhead">2. Phone login on this Pixel (recommended today)</h3>
-      <p class="meta">Open Sainsbury’s in Chrome on this phone, sign in fully (incl. MFA). Export cookies with a cookie editor that includes httpOnly cookies (e.g. Kiwi Browser + Cookie-Editor), paste JSON below, set passphrase, import.</p>
+      <p class="meta">Chrome can’t export httpOnly cookies. Install the <strong>Session Saver</strong> app, generate a pair code here, log into Sainsbury’s inside the app, then tap Save session.</p>
       <div class="toolbar">
-        <a class="button-link" href="https://www.sainsburys.co.uk/gol-ui/Hello" target="_blank" rel="noopener">Open Sainsbury’s login</a>
+        <a class="button-link" href="/autopilot-session-saver.apk" download>Download Session Saver APK</a>
+        <button type="button" data-action="pair-code" ${state.busy ? "disabled" : ""}>Generate pair code</button>
       </div>
+      <p class="meta">Install the APK (allow unknown apps for this download) → paste Autopilot URL → pair code → passphrase → Open login → Save session.</p>
       <label class="field">Vault passphrase
         <input data-field="vaultPassphrase" type="password" value="${escapeHtml(state.vaultPassphrase)}" placeholder="min 8 characters" autocomplete="new-password" />
       </label>
-      <label class="field">Exported cookies JSON
-        <textarea data-field="cookieJson" rows="5" placeholder='[{"name":"WC_AUTHENTICATION_…","value":"…","domain":".sainsburys.co.uk"}]'>${escapeHtml(state.cookieJson)}</textarea>
+      <label class="field">Or paste cookies manually (Cookie-Editor JSON / <code>a=b; c=d</code>)
+        <textarea data-field="cookieJson" rows="4" placeholder="Optional fallback if you already exported cookies">${escapeHtml(state.cookieJson)}</textarea>
       </label>
       <div class="toolbar">
-        <button type="button" data-action="import-cookies" ${state.busy ? "disabled" : ""}>Import phone session → vault</button>
+        <button type="button" class="secondary" data-action="import-cookies" ${state.busy ? "disabled" : ""}>Import pasted cookies → vault</button>
         <button type="button" class="secondary" data-action="unlock" ${state.busy ? "disabled" : ""}>Unlock vault</button>
         <button type="button" class="secondary" data-action="lock" ${state.busy ? "disabled" : ""}>Lock</button>
         <button type="button" class="secondary" data-action="disconnect" ${state.busy ? "disabled" : ""}>Disconnect</button>
@@ -710,6 +703,7 @@ function bindActions() {
   app.querySelector('[data-action="test-notify"]')?.addEventListener("click", wrap(testNotify));
   app.querySelector('[data-action="probe"]')?.addEventListener("click", wrap(runProbe));
   app.querySelector('[data-action="import-cookies"]')?.addEventListener("click", wrap(importPhoneCookies));
+  app.querySelector('[data-action="pair-code"]')?.addEventListener("click", wrap(createPairCode));
   app.querySelector('[data-action="connect-type"]')?.addEventListener("click", wrap(sendConnectText));
   app.querySelector('[data-action="connect-save"]')?.addEventListener("click", wrap(saveConnectSession));
   app.querySelector('[data-action="dry-run"]')?.addEventListener("click", wrap(dryRunPush));
