@@ -4,11 +4,14 @@ import { dataPath } from "./crypto.js";
 export type AppSettings = {
   ntfyTopic: string;
   ntfyServer: string;
+  /** Playwright / retailer HTTP proxy, e.g. http://user:pass@host:port */
+  sainsburysProxyUrl: string;
 };
 
 const DEFAULTS: AppSettings = {
   ntfyTopic: "",
   ntfyServer: "https://ntfy.sh",
+  sainsburysProxyUrl: "",
 };
 
 function settingsFile() {
@@ -27,8 +30,29 @@ export function loadSettings(): AppSettings {
 
 export function saveSettings(patch: Partial<AppSettings>): AppSettings {
   const next = { ...loadSettings(), ...patch };
-  next.ntfyTopic = next.ntfyTopic.trim();
+  next.ntfyTopic = (next.ntfyTopic ?? "").trim();
   next.ntfyServer = (next.ntfyServer || DEFAULTS.ntfyServer).replace(/\/$/, "");
+  next.sainsburysProxyUrl = (next.sainsburysProxyUrl ?? "").trim();
   writeFileSync(settingsFile(), JSON.stringify(next, null, 2));
   return next;
+}
+
+export function parseProxyUrl(proxyUrl: string): {
+  server: string;
+  username?: string;
+  password?: string;
+} | null {
+  if (!proxyUrl) return null;
+  try {
+    const u = new URL(proxyUrl);
+    if (!u.hostname) return null;
+    const port = u.port || (u.protocol === "https:" ? "443" : "80");
+    return {
+      server: `${u.protocol}//${u.hostname}:${port}`,
+      username: u.username ? decodeURIComponent(u.username) : undefined,
+      password: u.password ? decodeURIComponent(u.password) : undefined,
+    };
+  } catch {
+    return null;
+  }
 }

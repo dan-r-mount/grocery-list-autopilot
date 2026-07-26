@@ -19,6 +19,7 @@ Planning, dry-run scaffold, and **secure login foundation** (passkeys + encrypte
 - [Product & delivery plan](docs/PLAN.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Security & login](docs/SECURITY.md)
+- [Sainsbury’s Connect (Akamai / UK egress)](docs/SAINSBURYS_CONNECT.md)
 - [Milk MVP](docs/MVP.md)
 - [Risks & constraints](docs/RISKS.md)
 

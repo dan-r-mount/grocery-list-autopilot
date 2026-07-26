@@ -37,6 +37,16 @@ type BasketRun = {
 type AppSettings = {
   ntfyTopic: string;
   ntfyServer: string;
+  sainsburysProxyUrl: string;
+};
+
+type Reachability = {
+  ok: boolean;
+  status: number | null;
+  serverEgress: { ip: string | null; country: string | null; org: string | null };
+  sainsburys: { reachable: boolean; blockedByAkamai: boolean; titleSnippet: string | null };
+  proxyConfigured: boolean;
+  guidance: string;
 };
 
 type AuthStatus = {
@@ -81,6 +91,9 @@ const state: {
   vaultPassphrase: string;
   ntfyTopic: string;
   ntfyServer: string;
+  sainsburysProxyUrl: string;
+  cookieJson: string;
+  probe: Reachability | null;
   connectId: string | null;
   connect: ConnectSnapshot | null;
   typeBuffer: string;
@@ -97,6 +110,9 @@ const state: {
   vaultPassphrase: "",
   ntfyTopic: "",
   ntfyServer: "https://ntfy.sh",
+  sainsburysProxyUrl: "",
+  cookieJson: "",
+  probe: null,
   connectId: null,
   connect: null,
   typeBuffer: "",
@@ -119,6 +135,7 @@ async function refreshAuth() {
   if (state.auth.settings) {
     state.ntfyTopic = state.auth.settings.ntfyTopic;
     state.ntfyServer = state.auth.settings.ntfyServer;
+    state.sainsburysProxyUrl = state.auth.settings.sainsburysProxyUrl ?? "";
   }
 }
 
@@ -351,13 +368,61 @@ async function saveNotifySettings() {
     body: JSON.stringify({
       ntfyTopic: state.ntfyTopic,
       ntfyServer: state.ntfyServer,
+      sainsburysProxyUrl: state.sainsburysProxyUrl,
     }),
   });
   state.ntfyTopic = settings.ntfyTopic;
   state.ntfyServer = settings.ntfyServer;
-  state.message = settings.ntfyTopic
-    ? `Notifications will go to ntfy topic “${settings.ntfyTopic}”.`
-    : "Notification topic cleared.";
+  state.sainsburysProxyUrl = settings.sainsburysProxyUrl;
+  state.message = "Settings saved.";
+  await refreshAll();
+}
+
+async function runProbe() {
+  state.busy = true;
+  render();
+  try {
+    state.probe = await api<Reachability>("/api/sainsburys/probe");
+    state.message = state.probe.guidance;
+  } finally {
+    state.busy = false;
+    render();
+  }
+}
+
+async function importPhoneCookies() {
+  if (state.vaultPassphrase.length < 8) {
+    state.message = "Set a vault passphrase (8+ characters) first.";
+    render();
+    return;
+  }
+  let cookies: unknown;
+  try {
+    cookies = JSON.parse(state.cookieJson);
+  } catch {
+    throw new Error("Cookie JSON is not valid JSON");
+  }
+  if (!Array.isArray(cookies)) {
+    // Cookie-Editor sometimes wraps as { cookies: [...] } or a map
+    if (cookies && typeof cookies === "object" && Array.isArray((cookies as { cookies?: unknown }).cookies)) {
+      cookies = (cookies as { cookies: unknown[] }).cookies;
+    } else if (cookies && typeof cookies === "object") {
+      cookies = Object.entries(cookies as Record<string, string>).map(([name, value]) => ({
+        name,
+        value,
+        domain: ".sainsburys.co.uk",
+        path: "/",
+      }));
+    } else {
+      throw new Error("Cookie JSON must be an array of {name, value, domain} objects");
+    }
+  }
+  await api("/api/sainsburys/import-cookies", {
+    method: "POST",
+    body: JSON.stringify({ passphrase: state.vaultPassphrase, cookies }),
+  });
+  state.cookieJson = "";
+  state.message = "Sainsbury’s session imported from your phone and encrypted in the vault.";
   await refreshAll();
 }
 
@@ -483,18 +548,47 @@ function renderApp() {
     </section>
 
     <section class="panel">
-      <h2>Sainsbury’s secure connect</h2>
+      <h2>Sainsbury’s connect</h2>
       <p class="meta">Vault: ${sb?.hasVault ? "present" : "empty"} · ${sb?.unlocked ? "unlocked" : "locked"}${sb?.label ? ` · ${escapeHtml(sb.label)}` : ""}</p>
-      <div class="banner">Today on phone-only: type any passphrase (8+ characters), then tap <strong>Save demo vault</strong>. That proves encryption works. Real Sainsbury’s login is blocked from this temporary cloud browser — that’s the “Access Denied” page, not a passphrase problem.</div>
-      <label class="field">Vault passphrase (never stored — used to encrypt the session)
-        <input data-field="vaultPassphrase" type="password" value="${escapeHtml(state.vaultPassphrase)}" placeholder="min 8 characters" autocomplete="new-password" />
+      <div class="banner warn">Sainsbury’s blocks non-UK / datacenter IPs (Akamai). This demo host is in the US, so live Connect must use a <strong>UK residential/mobile proxy</strong>, or you log in on this Pixel and import cookies (your real UK mobile IP).</div>
+      <div class="toolbar">
+        <button type="button" class="secondary" data-action="probe" ${state.busy ? "disabled" : ""}>Test Sainsbury’s reachability</button>
+      </div>
+      ${
+        state.probe
+          ? `<p class="meta">Probe: HTTP ${state.probe.status ?? "—"} · server ${escapeHtml(state.probe.serverEgress.country ?? "?")} ${escapeHtml(state.probe.serverEgress.ip ?? "")} · proxy ${state.probe.proxyConfigured ? "configured" : "not set"} · ${state.probe.sainsburys.blockedByAkamai ? "Akamai blocked" : state.probe.ok ? "reachable" : "not reachable"}</p>`
+          : ""
+      }
+
+      <h3 class="subhead">1. UK egress proxy (for live Connect + later basket jobs)</h3>
+      <label class="field">Proxy URL
+        <input data-field="sainsburysProxyUrl" value="${escapeHtml(state.sainsburysProxyUrl)}" placeholder="http://user:pass@uk-residential-host:port" autocomplete="off" />
       </label>
       <div class="toolbar">
-        <button type="button" data-action="demo-vault" ${state.busy ? "disabled" : ""}>Save demo vault</button>
+        <button type="button" class="secondary" data-action="save-notify" ${state.busy ? "disabled" : ""}>Save settings</button>
+      </div>
+
+      <h3 class="subhead">2. Phone login on this Pixel (recommended today)</h3>
+      <p class="meta">Open Sainsbury’s in Chrome on this phone, sign in fully (incl. MFA). Export cookies with a cookie editor that includes httpOnly cookies (e.g. Kiwi Browser + Cookie-Editor), paste JSON below, set passphrase, import.</p>
+      <div class="toolbar">
+        <a class="button-link" href="https://www.sainsburys.co.uk/gol-ui/Hello" target="_blank" rel="noopener">Open Sainsbury’s login</a>
+      </div>
+      <label class="field">Vault passphrase
+        <input data-field="vaultPassphrase" type="password" value="${escapeHtml(state.vaultPassphrase)}" placeholder="min 8 characters" autocomplete="new-password" />
+      </label>
+      <label class="field">Exported cookies JSON
+        <textarea data-field="cookieJson" rows="5" placeholder='[{"name":"WC_AUTHENTICATION_…","value":"…","domain":".sainsburys.co.uk"}]'>${escapeHtml(state.cookieJson)}</textarea>
+      </label>
+      <div class="toolbar">
+        <button type="button" data-action="import-cookies" ${state.busy ? "disabled" : ""}>Import phone session → vault</button>
         <button type="button" class="secondary" data-action="unlock" ${state.busy ? "disabled" : ""}>Unlock vault</button>
         <button type="button" class="secondary" data-action="lock" ${state.busy ? "disabled" : ""}>Lock</button>
         <button type="button" class="secondary" data-action="disconnect" ${state.busy ? "disabled" : ""}>Disconnect</button>
-        <button type="button" class="secondary" data-action="connect" ${state.busy ? "disabled" : ""}>Try live Sainsbury’s connect</button>
+      </div>
+
+      <h3 class="subhead">3. Live Connect browser (needs UK proxy on this host)</h3>
+      <div class="toolbar">
+        <button type="button" class="secondary" data-action="connect" ${state.busy ? "disabled" : ""}>Start live Connect</button>
       </div>
       ${
         state.connect
@@ -504,7 +598,7 @@ function renderApp() {
               ${
                 state.connect.screenshotDataUrl
                   ? `<img class="live-view" alt="Sainsbury's login live view" src="${state.connect.screenshotDataUrl}" data-action="connect-tap" />`
-                  : `<p class="empty">Live view unavailable. On the computer run <code>pnpm playwright:install</code>, or use demo vault for UI testing.</p>`
+                  : `<p class="empty">No live view yet.</p>`
               }
               <label class="field">Type into the live page
                 <input data-field="typeBuffer" value="${escapeHtml(state.typeBuffer)}" placeholder="email / password / MFA code" />
@@ -577,7 +671,7 @@ function renderApp() {
 }
 
 function bindFields() {
-  app.querySelectorAll<HTMLInputElement>("[data-field]").forEach((input) => {
+  app.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("[data-field]").forEach((input) => {
     input.addEventListener("input", () => {
       const key = input.dataset.field as
         | "displayName"
@@ -585,7 +679,9 @@ function bindFields() {
         | "vaultPassphrase"
         | "typeBuffer"
         | "ntfyTopic"
-        | "ntfyServer";
+        | "ntfyServer"
+        | "sainsburysProxyUrl"
+        | "cookieJson";
       state[key] = input.value;
     });
   });
@@ -612,6 +708,8 @@ function bindActions() {
   app.querySelector('[data-action="demo-vault"]')?.addEventListener("click", wrap(saveDemoVault));
   app.querySelector('[data-action="save-notify"]')?.addEventListener("click", wrap(saveNotifySettings));
   app.querySelector('[data-action="test-notify"]')?.addEventListener("click", wrap(testNotify));
+  app.querySelector('[data-action="probe"]')?.addEventListener("click", wrap(runProbe));
+  app.querySelector('[data-action="import-cookies"]')?.addEventListener("click", wrap(importPhoneCookies));
   app.querySelector('[data-action="connect-type"]')?.addEventListener("click", wrap(sendConnectText));
   app.querySelector('[data-action="connect-save"]')?.addEventListener("click", wrap(saveConnectSession));
   app.querySelector('[data-action="dry-run"]')?.addEventListener("click", wrap(dryRunPush));

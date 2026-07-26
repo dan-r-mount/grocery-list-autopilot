@@ -208,8 +208,35 @@ li strong {
   background: #111;
 }
 
-.connect {
-  margin-top: 0.75rem;
+.subhead {
+  font-family: "Fraunces", serif;
+  font-size: 1.05rem;
+  margin: 1.25rem 0 0.5rem;
+  color: var(--leaf-deep);
+}
+
+textarea {
+  font: inherit;
+  font-weight: 400;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--ink);
+  width: 100%;
+  resize: vertical;
+}
+
+a.button-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.8rem 1.15rem;
+  border-radius: 999px;
+  background: var(--leaf);
+  color: #f7fff5;
+  text-decoration: none;
+  font-weight: 600;
 }
 
 footer {

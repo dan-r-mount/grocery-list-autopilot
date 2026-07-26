@@ -33,9 +33,11 @@ import {
   connectSnapshot,
   connectTap,
   connectType,
+  importCookiesToVault,
   saveDemoSession,
   startConnect,
 } from "./sainsburys/connect.js";
+import { probeSainsburysReachability } from "./sainsburys/probe.js";
 
 const services = await createDefaultServices();
 const app = new Hono();
@@ -180,10 +182,15 @@ app.get("/api/settings", (c) => {
 app.put("/api/settings", async (c) => {
   try {
     requireUser(c);
-    const body = await c.req.json<{ ntfyTopic?: string; ntfyServer?: string }>();
+    const body = await c.req.json<{
+      ntfyTopic?: string;
+      ntfyServer?: string;
+      sainsburysProxyUrl?: string;
+    }>();
     const settings = saveSettings({
       ntfyTopic: body.ntfyTopic,
       ntfyServer: body.ntfyServer,
+      sainsburysProxyUrl: body.sainsburysProxyUrl,
     });
     return c.json({ settings });
   } catch (err) {
@@ -207,6 +214,37 @@ app.get("/api/sainsburys/status", (c) => {
     return c.json(vaultStatus());
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : String(err) }, 401);
+  }
+});
+
+app.get("/api/sainsburys/probe", async (c) => {
+  try {
+    requireUser(c);
+    return c.json(await probeSainsburysReachability());
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 401);
+  }
+});
+
+app.post("/api/sainsburys/import-cookies", async (c) => {
+  try {
+    requireUser(c);
+    const body = await c.req.json<{
+      passphrase: string;
+      cookies: Array<{
+        name: string;
+        value: string;
+        domain?: string;
+        path?: string;
+        expires?: number;
+        httpOnly?: boolean;
+        secure?: boolean;
+      }>;
+    }>();
+    const session = importCookiesToVault(body.cookies ?? [], body.passphrase ?? "");
+    return c.json({ ok: true, session, status: vaultStatus() });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 400);
   }
 });
 

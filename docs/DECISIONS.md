@@ -2,6 +2,12 @@
 
 Lightweight ADR-style notes. Newest first.
 
+## 2026-07-26 — Work through Sainsbury’s Akamai, don’t bypass with demo vault
+
+**Context:** US/cloud IPs get HTTP 403 Access Denied before login; demo vault is not a substitute.  
+**Decision:** Require UK residential/mobile egress for server Connect, plus Pixel cookie-import login that uses the phone’s real UK IP.  
+**Consequences:** Probe + proxy settings + hardened Playwright; phone import is the phone-only path that actually authenticates.
+
 ## 2026-07-26 — Passkeys + encrypted retailer vault (no Sainsbury’s secrets in .env)
 
 **Context:** Sainsbury’s login must work from a Pixel without hard-coded credentials or session JSON in `.env`.  
