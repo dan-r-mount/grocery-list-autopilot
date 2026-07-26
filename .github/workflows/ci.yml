@@ -20,5 +20,6 @@ jobs:
       - run: pnpm install
       - run: pnpm --filter @gla/shared build
       - run: pnpm typecheck
+      - run: pnpm test:vault
       - run: pnpm milk:resolve
       - run: pnpm milk:push

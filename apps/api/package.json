@@ -8,12 +8,15 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "milk:resolve": "tsx src/cli/milk-resolve.ts",
-    "milk:push": "tsx src/cli/milk-push.ts"
+    "milk:push": "tsx src/cli/milk-push.ts",
+    "test:vault": "tsx src/cli/test-vault.ts"
   },
   "dependencies": {
     "@gla/shared": "workspace:*",
     "@hono/node-server": "^1.13.7",
-    "hono": "^4.6.16"
+    "@simplewebauthn/server": "^13.3.2",
+    "hono": "^4.6.16",
+    "playwright": "^1.62.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",

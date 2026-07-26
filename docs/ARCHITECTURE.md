@@ -130,9 +130,9 @@ Captured on human sign-off / override:
 
 ## Security
 
-- Store Sainsbury’s session material encrypted at rest.
-- Keep master token / OAuth secrets in env / secret manager only.
-- Household UI behind simple auth (shared password or magic links initially).
+- Store Sainsbury’s session material **encrypted** in `data/sainsburys.vault` (UI passphrase; never `.env`).
+- Household access via **passkeys** — no shared app password in config.
+- Keep master token / OAuth secrets in the same vault pattern if/when added — not plain `.env`.
 - Audit every basket mutation.
 - Feature flags: `SAINSBURYS_WRITE_ENABLED=false` until milk dry-runs look correct.
 

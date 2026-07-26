@@ -43,7 +43,7 @@ There is **no public personal basket API**. Practical approaches:
 2. **Browser automation** (Playwright) as a fallback when APIs change.
 3. **Never auto-checkout** — basket only; human completes order on sainsburys.co.uk / app.
 
-Auth reality: sessions expire; MFA is common. Plan for a **session refresh ritual** (you re-authenticate periodically; the app stores encrypted session material).
+Auth reality: sessions expire; MFA is common. **Do not** put Sainsbury’s passwords or session JSON in `.env`. Use interactive **Connect Sainsbury’s** (Pixel-friendly live browser view) and store only an **encrypted vault** unlocked by a UI passphrase. See [SECURITY.md](./SECURITY.md).
 
 ## Learning model (start simple)
 
@@ -83,6 +83,7 @@ Sunday evening (configurable)
 - Repo layout, docs, shared contracts
 - Dry-run adapters (no real Keep / Sainsbury’s calls)
 - Local “milk” resolution demo with seeded preference
+- Passkey household auth + encrypted Sainsbury’s vault + Pixel tunnel script
 
 ### Phase 1 — Milk MVP
 

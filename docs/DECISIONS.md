@@ -2,6 +2,12 @@
 
 Lightweight ADR-style notes. Newest first.
 
+## 2026-07-26 — Passkeys + encrypted retailer vault (no Sainsbury’s secrets in .env)
+
+**Context:** Sainsbury’s login must work from a Pixel without hard-coded credentials or session JSON in `.env`.  
+**Decision:** Household access via WebAuthn passkeys; Sainsbury’s via interactive connect → AES-GCM vault unlocked by UI passphrase; app cookie signing secret generated under `data/`.  
+**Consequences:** Pixel testing needs HTTPS (Cloudflare tunnel). Partner can use the UI without holding the retailer password.
+
 ## 2026-07-26 — Plan first, milk MVP second
 
 **Context:** Large automation surface (Keep + Sainsbury’s + learning + notifications).  

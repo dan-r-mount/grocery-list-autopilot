@@ -14,10 +14,11 @@ After that works reliably, expand to the rest of the list and richer learning (t
 
 ## Status
 
-Planning and scaffolding only. See:
+Planning, dry-run scaffold, and **secure login foundation** (passkeys + encrypted Sainsbury’s vault). See:
 
 - [Product & delivery plan](docs/PLAN.md)
 - [Architecture](docs/ARCHITECTURE.md)
+- [Security & login](docs/SECURITY.md)
 - [Milk MVP](docs/MVP.md)
 - [Risks & constraints](docs/RISKS.md)
 
@@ -53,3 +54,29 @@ scripts/          Local helpers
 ## Next step
 
 Read [docs/PLAN.md](docs/PLAN.md) and [docs/MVP.md](docs/MVP.md), then implement Phase 0 locally against a dry-run Sainsbury’s adapter.
+
+## Local dry-run
+
+```bash
+pnpm install
+pnpm --filter @gla/shared build
+pnpm milk:resolve    # milk → preferred 4L product
+pnpm milk:push       # dry-run weekly basket push + notify log
+pnpm dev:api         # http://localhost:3001 (binds 0.0.0.0)
+pnpm dev:web         # http://localhost:3000
+```
+
+## Secure login (Pixel)
+
+Sainsbury’s email/password are **never** stored in `.env`. You sign into the app with a **passkey**, then use **Connect Sainsbury’s** to complete login in a live browser view; only an encrypted session vault is kept (`data/sainsburys.vault`).
+
+Details: [docs/SECURITY.md](docs/SECURITY.md)
+
+### Test on a Google Pixel
+
+1. Start `pnpm dev:api` and `pnpm dev:web`.
+2. Run `scripts/mobile-tunnel.sh` (needs `cloudflared`) and open the `https://*.trycloudflare.com` URL on the Pixel.
+3. Register a passkey (fingerprint / screen lock).
+4. Set a vault passphrase → **Connect on this phone** → sign in to Sainsbury’s in the live view → **Save encrypted session**.
+
+Passkeys require HTTPS on a phone; plain `http://LAN-IP:3000` is not enough.

@@ -8,7 +8,9 @@
     "dev:web": "pnpm --filter @gla/web dev",
     "milk:resolve": "pnpm --filter @gla/api milk:resolve",
     "milk:push": "pnpm --filter @gla/api milk:push",
-    "typecheck": "pnpm -r run typecheck"
+    "test:vault": "pnpm --filter @gla/api test:vault",
+    "typecheck": "pnpm -r run typecheck",
+    "playwright:install": "pnpm --filter @gla/api exec playwright install chromium"
   },
   "engines": {
     "node": ">=20"
