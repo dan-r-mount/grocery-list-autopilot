@@ -92,7 +92,7 @@ app.get("/health", (c) =>
 /** Explicit APK download so Android Chrome installs instead of unzipping. */
 app.get("/download/session-saver.apk", (c) => {
   const here = path.dirname(fileURLToPath(import.meta.url));
-  const apkPath = path.resolve(here, "../../../web/public/autopilot-session-saver.apk");
+  const apkPath = path.resolve(here, "../../web/public/autopilot-session-saver.apk");
   if (!existsSync(apkPath)) {
     return c.json({ error: "APK not built yet" }, 404);
   }
