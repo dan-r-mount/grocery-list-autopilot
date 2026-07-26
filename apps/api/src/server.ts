@@ -1,3 +1,6 @@
+import { readFileSync, existsSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
@@ -85,6 +88,25 @@ app.get("/health", (c) =>
     sainsburys: vaultStatus(),
   }),
 );
+
+/** Explicit APK download so Android Chrome installs instead of unzipping. */
+app.get("/download/session-saver.apk", (c) => {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const apkPath = path.resolve(here, "../../../web/public/autopilot-session-saver.apk");
+  if (!existsSync(apkPath)) {
+    return c.json({ error: "APK not built yet" }, 404);
+  }
+  const bytes = readFileSync(apkPath);
+  return new Response(bytes, {
+    headers: {
+      "Content-Type": "application/vnd.android.package-archive",
+      "Content-Disposition": 'attachment; filename="autopilot-session-saver.apk"',
+      "Content-Length": String(bytes.length),
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+});
 
 app.get("/api/auth/status", (c) => {
   const user = currentUser(c);

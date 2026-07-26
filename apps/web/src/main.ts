@@ -564,10 +564,10 @@ function renderApp() {
       <p class="meta">Chrome can’t export httpOnly cookies. Install the <strong>Session Saver</strong> app, generate a pair code here, log into Sainsbury’s inside the app, then tap Save session.</p>
       <p class="meta">Autopilot URL to paste into the app: <code>${escapeHtml(window.location.origin)}</code></p>
       <div class="toolbar">
-        <a class="button-link" href="/autopilot-session-saver.apk" download>Download Session Saver APK</a>
+        <a class="button-link" href="/download/session-saver.apk">Download Session Saver APK</a>
         <button type="button" data-action="pair-code" ${state.busy ? "disabled" : ""}>Generate pair code</button>
       </div>
-      <p class="meta">Install the APK (allow unknown apps for this download) → paste Autopilot URL → pair code → passphrase → Open login → Save session.</p>
+      <p class="meta">Install the APK from Downloads (do not unzip it — an APK is already an install package). Allow “Install unknown apps” for Chrome if Android asks.</p>
       <label class="field">Vault passphrase
         <input data-field="vaultPassphrase" type="password" value="${escapeHtml(state.vaultPassphrase)}" placeholder="min 8 characters" autocomplete="new-password" />
       </label>
