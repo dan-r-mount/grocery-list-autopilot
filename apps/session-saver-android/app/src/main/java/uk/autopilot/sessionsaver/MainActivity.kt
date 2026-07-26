@@ -40,7 +40,8 @@ class MainActivity : AppCompatActivity() {
         intent?.getStringExtra("pairCode")?.let { pairCode.setText(it) }
 
         if (apiBase.text.isNullOrBlank()) {
-            apiBase.setText("https://gains-bride-kept-referred.trycloudflare.com")
+            // Leave blank — user must paste the current Autopilot HTTPS URL from the browser.
+            apiBase.hint = "Paste Autopilot https:// URL from Chrome"
         }
 
         CookieManager.getInstance().setAcceptCookie(true)
@@ -100,19 +101,28 @@ class MainActivity : AppCompatActivity() {
                     .put("cookieText", cookieHeader)
                 OutputStreamWriter(conn.outputStream).use { it.write(body.toString()) }
                 val codeResp = conn.responseCode
-                val resp = (if (codeResp in 200..299) conn.inputStream else conn.errorStream)
-                    .bufferedReader().readText()
+                val stream = if (codeResp in 200..299) conn.inputStream else conn.errorStream
+                val resp = stream?.bufferedReader()?.readText().orEmpty()
                 runOnUiThread {
                     if (codeResp in 200..299) {
                         status.text = "Saved. Return to Autopilot — vault should show a Sainsbury’s session."
                         Toast.makeText(this, "Session saved to Autopilot", Toast.LENGTH_LONG).show()
                     } else {
-                        status.text = "Save failed ($codeResp): $resp"
+                        val err = try {
+                            JSONObject(resp).optString("error", resp)
+                        } catch (_: Exception) {
+                            resp.ifBlank { "HTTP $codeResp" }
+                        }
+                        status.text = "Save failed: $err"
+                        Toast.makeText(this, err, Toast.LENGTH_LONG).show()
                     }
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    status.text = "Save failed: ${e.message}"
+                    val msg =
+                        "Could not reach Autopilot (${e.message}). Check the https:// URL is the current tunnel link and you are online."
+                    status.text = msg
+                    Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
                 }
             }
         }

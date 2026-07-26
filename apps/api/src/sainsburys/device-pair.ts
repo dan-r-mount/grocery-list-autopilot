@@ -24,13 +24,18 @@ export function createDevicePair(userId: string, ttlMinutes = 20): DevicePair {
   return pair;
 }
 
-export function consumeDevicePair(code: string): DevicePair {
+export function peekDevicePair(code: string): DevicePair {
   const normalized = code.trim().toUpperCase();
   const pair = pairs.get(normalized);
   if (!pair || pair.expiresAt < Date.now()) {
     pairs.delete(normalized);
     throw new Error("Pair code invalid or expired — generate a new one in Autopilot");
   }
-  pairs.delete(normalized);
+  return pair;
+}
+
+export function consumeDevicePair(code: string): DevicePair {
+  const pair = peekDevicePair(code);
+  pairs.delete(pair.code);
   return pair;
 }

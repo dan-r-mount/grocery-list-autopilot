@@ -413,7 +413,8 @@ async function createPairCode() {
     "/api/sainsburys/device-pair",
     { method: "POST", body: "{}" },
   );
-  state.message = `Pair code ${result.pair.code} — open Session Saver, enter this code + your passphrase, log into Sainsbury’s, tap Save session.`;
+  const origin = window.location.origin;
+  state.message = `Pair code ${result.pair.code}. In Session Saver set Autopilot URL to ${origin}, enter this code + your passphrase, Open login, then Save session.`;
   render();
 }
 
@@ -561,6 +562,7 @@ function renderApp() {
 
       <h3 class="subhead">2. Phone login on this Pixel (recommended today)</h3>
       <p class="meta">Chrome can’t export httpOnly cookies. Install the <strong>Session Saver</strong> app, generate a pair code here, log into Sainsbury’s inside the app, then tap Save session.</p>
+      <p class="meta">Autopilot URL to paste into the app: <code>${escapeHtml(window.location.origin)}</code></p>
       <div class="toolbar">
         <a class="button-link" href="/autopilot-session-saver.apk" download>Download Session Saver APK</a>
         <button type="button" data-action="pair-code" ${state.busy ? "disabled" : ""}>Generate pair code</button>

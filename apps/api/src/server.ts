@@ -38,7 +38,7 @@ import {
   startConnect,
 } from "./sainsburys/connect.js";
 import { parseCookieInput } from "./sainsburys/cookie-parse.js";
-import { createDevicePair, consumeDevicePair } from "./sainsburys/device-pair.js";
+import { createDevicePair, consumeDevicePair, peekDevicePair } from "./sainsburys/device-pair.js";
 import { probeSainsburysReachability } from "./sainsburys/probe.js";
 
 const services = await createDefaultServices();
@@ -269,7 +269,9 @@ app.post("/api/sainsburys/device-pair/import", async (c) => {
       cookieText?: string;
       cookies?: unknown;
     }>();
-    consumeDevicePair(body.code ?? "");
+    // Validate pair first, but only consume after a successful vault write
+    // so a failed first attempt (bad paste / incomplete login) can retry.
+    peekDevicePair(body.code ?? "");
     const cookies = body.cookieText
       ? parseCookieInput(body.cookieText)
       : parseCookieInput(JSON.stringify(body.cookies ?? []));
@@ -278,6 +280,7 @@ app.post("/api/sainsburys/device-pair/import", async (c) => {
       body.passphrase ?? "",
       "Sainsbury's (Pixel Session Saver)",
     );
+    consumeDevicePair(body.code ?? "");
     return c.json({ ok: true, session, status: vaultStatus() });
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : String(err) }, 400);
