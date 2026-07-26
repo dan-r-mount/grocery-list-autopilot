@@ -117,5 +117,6 @@ Same Wi‑Fi HTTP to a LAN IP is fine for crude UI checks, but **passkeys will n
 | Passkey register / login / partner invite | Done |
 | Encrypted retailer vault | Done |
 | Live mobile connect view (Playwright) | Done (install Chromium via `pnpm playwright:install`) |
-| Cloudflare tunnel script for Pixel | Done (`scripts/mobile-tunnel.sh`) |
+| Cloudflare tunnel script for Pixel | Done (`pnpm mobile` / `pnpm tunnel`) |
+| ntfy push to Pixel | Done (topic configured in UI) |
 | Production hardening (CSP, rate limits, owner role) | Later |
