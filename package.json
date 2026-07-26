@@ -10,7 +10,9 @@
     "milk:push": "pnpm --filter @gla/api milk:push",
     "test:vault": "pnpm --filter @gla/api test:vault",
     "typecheck": "pnpm -r run typecheck",
-    "playwright:install": "pnpm --filter @gla/api exec playwright install chromium"
+    "playwright:install": "pnpm --filter @gla/api exec playwright install chromium",
+    "tunnel": "bash scripts/mobile-tunnel.sh",
+    "mobile": "bash scripts/dev-mobile.sh"
   },
   "engines": {
     "node": ">=20"

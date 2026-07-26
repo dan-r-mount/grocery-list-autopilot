@@ -70,13 +70,17 @@ pnpm dev:web         # http://localhost:3000
 
 Sainsbury’s email/password are **never** stored in `.env`. You sign into the app with a **passkey**, then use **Connect Sainsbury’s** to complete login in a live browser view; only an encrypted session vault is kept (`data/sainsburys.vault`).
 
-Details: [docs/SECURITY.md](docs/SECURITY.md)
+Details: [docs/SECURITY.md](docs/SECURITY.md) · Phone walkthrough: [docs/PIXEL.md](docs/PIXEL.md)
 
-### Test on a Google Pixel
+### What you need to do
 
-1. Start `pnpm dev:api` and `pnpm dev:web`.
-2. Run `scripts/mobile-tunnel.sh` (needs `cloudflared`) and open the `https://*.trycloudflare.com` URL on the Pixel.
-3. Register a passkey (fingerprint / screen lock).
-4. Set a vault passphrase → **Connect on this phone** → sign in to Sainsbury’s in the live view → **Save encrypted session**.
+**You do not run `pnpm` on the phone.** On a laptop/desktop:
 
-Passkeys require HTTPS on a phone; plain `http://LAN-IP:3000` is not enough.
+```bash
+pnpm install
+pnpm --filter @gla/shared build
+pnpm playwright:install
+pnpm mobile
+```
+
+Then on the **Pixel**, open Chrome and paste the `https://…trycloudflare.com` URL printed in the terminal. Register a passkey, optionally set up ntfy notifications, and try a dry-run push.

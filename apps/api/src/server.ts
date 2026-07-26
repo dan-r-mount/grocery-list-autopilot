@@ -25,6 +25,8 @@ import {
   unlockVault,
   vaultStatus,
 } from "./security/vault.js";
+import { loadSettings, saveSettings } from "./security/settings.js";
+import { sendTestNotification } from "./notify/ntfy.js";
 import {
   closeConnect,
   completeConnect,
@@ -87,6 +89,11 @@ app.get("/api/auth/status", (c) => {
     members: listUsers(),
     user,
     sainsburys: vaultStatus(),
+    settings: user ? loadSettings() : null,
+    secureContextHint: {
+      needsHttpsForPasskeys: true,
+      howToTestOnPixel: "On a computer run: pnpm mobile — then open the printed https:// URL in Pixel Chrome. Do not run pnpm on the phone.",
+    },
   });
 });
 
@@ -158,6 +165,39 @@ app.post("/api/auth/invite", (c) => {
     return c.json({ invite });
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : String(err) }, 401);
+  }
+});
+
+app.get("/api/settings", (c) => {
+  try {
+    requireUser(c);
+    return c.json({ settings: loadSettings() });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 401);
+  }
+});
+
+app.put("/api/settings", async (c) => {
+  try {
+    requireUser(c);
+    const body = await c.req.json<{ ntfyTopic?: string; ntfyServer?: string }>();
+    const settings = saveSettings({
+      ntfyTopic: body.ntfyTopic,
+      ntfyServer: body.ntfyServer,
+    });
+    return c.json({ settings });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 401);
+  }
+});
+
+app.post("/api/notify/test", async (c) => {
+  try {
+    requireUser(c);
+    const result = await sendTestNotification();
+    return c.json(result, result.ok ? 200 : 400);
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 400);
   }
 });
 

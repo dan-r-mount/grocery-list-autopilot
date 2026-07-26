@@ -4,12 +4,12 @@ import type {
   ListItem,
   ListSource,
   Notifier,
-  NotificationPayload,
   Preference,
   PreferenceStore,
   ProductCandidate,
   ShopContext,
 } from "@gla/shared";
+import { CompositeNotifier, ConsoleNotifier, NtfyNotifier } from "./notify/ntfy.js";
 
 /** Seeded household list for Phase 0 / milk MVP demos. */
 export class InMemoryListSource implements ListSource {
@@ -78,12 +78,6 @@ export class MemoryPreferenceStore implements PreferenceStore {
   }
 }
 
-export class ConsoleNotifier implements Notifier {
-  async notify(message: NotificationPayload): Promise<void> {
-    console.log(`[notify] ${message.title}: ${message.body} (run ${message.runId})`);
-  }
-}
-
 export function defaultMilkCatalogue(): ProductCandidate[] {
   return [
     {
@@ -148,7 +142,7 @@ export async function createDefaultServices(): Promise<AppServices> {
       process.env.SAINSBURYS_WRITE_ENABLED === "true",
     ),
     prefs,
-    notifier: new ConsoleNotifier(),
+    notifier: new CompositeNotifier([new ConsoleNotifier(), new NtfyNotifier()]),
     runs: [],
   };
 }

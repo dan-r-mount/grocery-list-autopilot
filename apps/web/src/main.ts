@@ -34,6 +34,11 @@ type BasketRun = {
   }>;
 };
 
+type AppSettings = {
+  ntfyTopic: string;
+  ntfyServer: string;
+};
+
 type AuthStatus = {
   bootstrapped: boolean;
   memberCount: number;
@@ -45,6 +50,7 @@ type AuthStatus = {
     capturedAt: string | null;
     label: string | null;
   };
+  settings: AppSettings | null;
 };
 
 type ConnectSnapshot = {
@@ -59,6 +65,10 @@ const root = document.querySelector<HTMLDivElement>("#app");
 if (!root) throw new Error("#app missing");
 const app: HTMLDivElement = root;
 
+const isSecure = window.isSecureContext;
+const isLocalhost =
+  location.hostname === "localhost" || location.hostname === "127.0.0.1";
+
 const state: {
   auth: AuthStatus | null;
   items: ListItem[];
@@ -69,6 +79,8 @@ const state: {
   displayName: string;
   inviteCode: string;
   vaultPassphrase: string;
+  ntfyTopic: string;
+  ntfyServer: string;
   connectId: string | null;
   connect: ConnectSnapshot | null;
   typeBuffer: string;
@@ -83,6 +95,8 @@ const state: {
   displayName: "",
   inviteCode: "",
   vaultPassphrase: "",
+  ntfyTopic: "",
+  ntfyServer: "https://ntfy.sh",
   connectId: null,
   connect: null,
   typeBuffer: "",
@@ -102,6 +116,10 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
 async function refreshAuth() {
   state.auth = await api<AuthStatus>("/api/auth/status");
+  if (state.auth.settings) {
+    state.ntfyTopic = state.auth.settings.ntfyTopic;
+    state.ntfyServer = state.auth.settings.ntfyServer;
+  }
 }
 
 async function refreshApp() {
@@ -119,9 +137,7 @@ async function refreshApp() {
   state.items = list.items;
   state.resolutions = resolutions.resolutions;
   state.runs = runs.runs;
-  if (state.auth) {
-    state.auth.sainsburys = (await api<AuthStatus>("/api/auth/status")).sainsburys;
-  }
+  await refreshAuth();
 }
 
 async function refreshAll() {
@@ -329,6 +345,31 @@ async function saveDemoVault() {
   await refreshAll();
 }
 
+async function saveNotifySettings() {
+  const { settings } = await api<{ settings: AppSettings }>("/api/settings", {
+    method: "PUT",
+    body: JSON.stringify({
+      ntfyTopic: state.ntfyTopic,
+      ntfyServer: state.ntfyServer,
+    }),
+  });
+  state.ntfyTopic = settings.ntfyTopic;
+  state.ntfyServer = settings.ntfyServer;
+  state.message = settings.ntfyTopic
+    ? `Notifications will go to ntfy topic “${settings.ntfyTopic}”.`
+    : "Notification topic cleared.";
+  await refreshAll();
+}
+
+async function testNotify() {
+  const result = await api<{ ok: boolean; detail: string }>("/api/notify/test", {
+    method: "POST",
+    body: "{}",
+  });
+  state.message = result.detail;
+  render();
+}
+
 async function dryRunPush() {
   state.busy = true;
   render();
@@ -369,13 +410,21 @@ function escapeHtml(value: string): string {
     .replaceAll('"', "&quot;");
 }
 
+function phoneHintBanner(): string {
+  if (isSecure || isLocalhost) {
+    return `<div class="banner">You’re on a secure page — passkeys can work here. This phone only needs Chrome; <strong>pnpm runs on your computer</strong>, not on the Pixel.</div>`;
+  }
+  return `<div class="banner warn">This page is not HTTPS, so Android passkeys will fail. On your computer run <code>pnpm mobile</code>, then open the printed <code>https://…trycloudflare.com</code> link here in Chrome.</div>`;
+}
+
 function renderAuthGate() {
   const bootstrapped = state.auth?.bootstrapped ?? false;
   return `
     <header>
       <p class="brand">Autopilot</p>
-      <p class="lede">Sign in with a passkey on this Pixel (or laptop). No shared household password — and Sainsbury’s credentials are never kept in .env files.</p>
-      ${!browserSupportsWebAuthn() ? `<div class="banner warn">Passkeys need a secure context. On a phone, open the HTTPS tunnel URL from <code>scripts/mobile-tunnel.sh</code>.</div>` : ""}
+      <p class="lede">Sign in with a passkey. Your computer runs the app; this Pixel is just the browser.</p>
+      ${phoneHintBanner()}
+      ${!browserSupportsWebAuthn() ? `<div class="banner warn">Passkeys aren’t available in this browser context. Use the HTTPS tunnel URL from <code>pnpm mobile</code>.</div>` : ""}
       ${state.message ? `<div class="banner">${escapeHtml(state.message)}</div>` : ""}
     </header>
     <section class="panel">
@@ -409,6 +458,7 @@ function renderApp() {
     <header>
       <p class="brand">Autopilot</p>
       <p class="lede">Signed in as <strong>${escapeHtml(state.auth?.user?.displayName ?? "")}</strong>. Connect Sainsbury’s from this phone — login happens in a live browser view; only an encrypted session is kept.</p>
+      ${phoneHintBanner()}
       ${state.message ? `<div class="banner">${escapeHtml(state.message)}</div>` : ""}
       <div class="toolbar">
         <button type="button" class="secondary" data-action="invite" ${state.busy ? "disabled" : ""}>Partner invite</button>
@@ -416,6 +466,21 @@ function renderApp() {
         <button type="button" class="secondary" data-action="logout" ${state.busy ? "disabled" : ""}>Sign out</button>
       </div>
     </header>
+
+    <section class="panel">
+      <h2>Phone notifications (ntfy)</h2>
+      <p class="meta">Install the free <strong>ntfy</strong> app on your Pixel, subscribe to a topic name you invent, then save it here. No Google Firebase setup required.</p>
+      <label class="field">Topic
+        <input data-field="ntfyTopic" value="${escapeHtml(state.ntfyTopic)}" placeholder="e.g. dan-grocery-autopilot-7f3a" autocomplete="off" />
+      </label>
+      <label class="field">Server
+        <input data-field="ntfyServer" value="${escapeHtml(state.ntfyServer)}" placeholder="https://ntfy.sh" autocomplete="off" />
+      </label>
+      <div class="toolbar">
+        <button type="button" data-action="save-notify" ${state.busy ? "disabled" : ""}>Save notification settings</button>
+        <button type="button" class="secondary" data-action="test-notify" ${state.busy ? "disabled" : ""}>Send test notification</button>
+      </div>
+    </section>
 
     <section class="panel">
       <h2>Sainsbury’s secure connect</h2>
@@ -438,7 +503,7 @@ function renderApp() {
               ${
                 state.connect.screenshotDataUrl
                   ? `<img class="live-view" alt="Sainsbury's login live view" src="${state.connect.screenshotDataUrl}" data-action="connect-tap" />`
-                  : `<p class="empty">Live view unavailable. Install Playwright Chromium on the server, or use demo vault for UI testing.</p>`
+                  : `<p class="empty">Live view unavailable. On the computer run <code>pnpm playwright:install</code>, or use demo vault for UI testing.</p>`
               }
               <label class="field">Type into the live page
                 <input data-field="typeBuffer" value="${escapeHtml(state.typeBuffer)}" placeholder="email / password / MFA code" />
@@ -506,7 +571,7 @@ function renderApp() {
         </ul>
       </section>
     </div>
-    <footer>Pixel tip: use <code>scripts/mobile-tunnel.sh</code> for HTTPS so passkeys work. Never put Sainsbury’s passwords in .env.</footer>
+    <footer>Full Pixel guide: <code>docs/PIXEL.md</code>. Never put Sainsbury’s passwords in .env.</footer>
   `;
 }
 
@@ -517,7 +582,9 @@ function bindFields() {
         | "displayName"
         | "inviteCode"
         | "vaultPassphrase"
-        | "typeBuffer";
+        | "typeBuffer"
+        | "ntfyTopic"
+        | "ntfyServer";
       state[key] = input.value;
     });
   });
@@ -542,6 +609,8 @@ function bindActions() {
   app.querySelector('[data-action="lock"]')?.addEventListener("click", wrap(lockVault));
   app.querySelector('[data-action="disconnect"]')?.addEventListener("click", wrap(disconnectVault));
   app.querySelector('[data-action="demo-vault"]')?.addEventListener("click", wrap(saveDemoVault));
+  app.querySelector('[data-action="save-notify"]')?.addEventListener("click", wrap(saveNotifySettings));
+  app.querySelector('[data-action="test-notify"]')?.addEventListener("click", wrap(testNotify));
   app.querySelector('[data-action="connect-type"]')?.addEventListener("click", wrap(sendConnectText));
   app.querySelector('[data-action="connect-save"]')?.addEventListener("click", wrap(saveConnectSession));
   app.querySelector('[data-action="dry-run"]')?.addEventListener("click", wrap(dryRunPush));
@@ -569,7 +638,7 @@ render();
 void refreshAll().catch((err) => {
   state.message =
     err instanceof Error
-      ? `API unreachable (${err.message}). Start pnpm dev:api`
+      ? `API unreachable (${err.message}). On your computer run: pnpm mobile`
       : String(err);
   render();
 });
