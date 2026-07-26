@@ -19,11 +19,43 @@ const sessions = new Map<string, ConnectState>();
 
 const LOGIN_URL = "https://www.sainsburys.co.uk/gol-ui/Hello";
 
+const BLOCKED_MESSAGE =
+  "Sainsbury’s blocked the automated login browser (bot protection). This is not your passphrase. On this temporary phone demo, use “Save demo vault” instead. Real Sainsbury’s login needs to run from your home computer later.";
+
 export function getConnect(id: string) {
   return sessions.get(id);
 }
 
-export async function startConnect(): Promise<{ id: string; mode: "live" | "unavailable"; message: string }> {
+async function detectBotBlock(state: ConnectState) {
+  if (!state.page) return;
+  try {
+    const text = (await state.page.locator("body").innerText({ timeout: 2000 })).toLowerCase();
+    if (
+      text.includes("access denied") ||
+      text.includes("errors.edgesuite.net") ||
+      text.includes("reference #")
+    ) {
+      state.status = "failed";
+      state.error = BLOCKED_MESSAGE;
+    }
+  } catch {
+    // page may still be loading
+  }
+}
+
+async function refreshScreenshot(state: ConnectState) {
+  if (!state.page) return;
+  const buf = await state.page.screenshot({ type: "jpeg", quality: 55 });
+  state.lastScreenshot = buf.toString("base64");
+  state.pageUrl = state.page.url();
+  await detectBotBlock(state);
+}
+
+export async function startConnect(): Promise<{
+  id: string;
+  mode: "live" | "unavailable" | "blocked";
+  message: string;
+}> {
   const id = randomToken(12);
   const state: ConnectState = {
     id,
@@ -48,6 +80,17 @@ export async function startConnect(): Promise<{ id: string; mode: "live" | "unav
     state.status = "awaiting_login";
     state.pageUrl = page.url();
     await refreshScreenshot(state);
+
+    if (state.error) {
+      const message = state.error;
+      await closeConnect(id);
+      return {
+        id,
+        mode: "blocked",
+        message,
+      };
+    }
+
     return {
       id,
       mode: "live",
@@ -55,27 +98,18 @@ export async function startConnect(): Promise<{ id: string; mode: "live" | "unav
         "Live Sainsbury's browser started. Sign in on the Pixel view (including MFA), then tap Save session.",
     };
   } catch (err) {
-    state.status = "unavailable" as ConnectState["status"];
     state.error =
       err instanceof Error
         ? err.message
         : "Playwright unavailable — run: pnpm --filter @gla/api exec playwright install chromium";
-    // Use failed status for typing
     state.status = "failed";
     return {
       id,
       mode: "unavailable",
       message:
-        "Live browser could not start. Install Chromium for Playwright, or use the guided checklist on the phone UI.",
+        "Live browser could not start. Use Save demo vault for now, or install Playwright Chromium on a home computer later.",
     };
   }
-}
-
-async function refreshScreenshot(state: ConnectState) {
-  if (!state.page) return;
-  const buf = await state.page.screenshot({ type: "jpeg", quality: 55 });
-  state.lastScreenshot = buf.toString("base64");
-  state.pageUrl = state.page.url();
 }
 
 export async function connectSnapshot(id: string) {
@@ -129,14 +163,15 @@ export async function completeConnect(
 
   if (!state.page || !state.browser) {
     throw new Error(
-      "No live browser session to capture. Start Connect again after installing Playwright Chromium.",
+      "No live browser session to capture. Use Save demo vault on this phone demo, or try Connect again later from a home computer.",
     );
   }
 
   const cookies = await state.page.context().cookies();
-  const wc = cookies.find((c) =>
-    c.name.toLowerCase().includes("wc_authentication") ||
-    c.name.toLowerCase() === "wcauthtoken",
+  const wc = cookies.find(
+    (c) =>
+      c.name.toLowerCase().includes("wc_authentication") ||
+      c.name.toLowerCase() === "wcauthtoken",
   );
 
   const session: SainsburysSession = {
@@ -176,7 +211,6 @@ export async function closeConnect(id: string) {
   state.browser = undefined;
   state.page = undefined;
   state.status = state.status === "completed" ? "completed" : "closed";
-  // keep metadata briefly for UI, then drop
   setTimeout(() => sessions.delete(id), 60_000);
 }
 

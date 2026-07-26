@@ -108,6 +108,7 @@ Same Wi‑Fi HTTP to a LAN IP is fine for crude UI checks, but **passkeys will n
 | Partner overreach | Partner passkeys can use list UI; Connect Sainsbury’s limited to signed-in users (optionally owner-only later) |
 | Session replay after disconnect | Disconnect wipes vault; retailer should invalidate on password change |
 | Tunnel URL leakage | Quick tunnels are unguessable but treat as sensitive while running |
+| Sainsbury’s “Access Denied” (Akamai) on Connect | Headless/cloud IPs are often blocked. Use demo vault on phone demos; real connect from a home ISP / non-headless browser later |
 
 ## Implementation status
 

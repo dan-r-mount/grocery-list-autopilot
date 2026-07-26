@@ -485,15 +485,16 @@ function renderApp() {
     <section class="panel">
       <h2>Sainsbury’s secure connect</h2>
       <p class="meta">Vault: ${sb?.hasVault ? "present" : "empty"} · ${sb?.unlocked ? "unlocked" : "locked"}${sb?.label ? ` · ${escapeHtml(sb.label)}` : ""}</p>
+      <div class="banner">Today on phone-only: type any passphrase (8+ characters), then tap <strong>Save demo vault</strong>. That proves encryption works. Real Sainsbury’s login is blocked from this temporary cloud browser — that’s the “Access Denied” page, not a passphrase problem.</div>
       <label class="field">Vault passphrase (never stored — used to encrypt the session)
         <input data-field="vaultPassphrase" type="password" value="${escapeHtml(state.vaultPassphrase)}" placeholder="min 8 characters" autocomplete="new-password" />
       </label>
       <div class="toolbar">
-        <button type="button" data-action="connect" ${state.busy ? "disabled" : ""}>Connect on this phone</button>
+        <button type="button" data-action="demo-vault" ${state.busy ? "disabled" : ""}>Save demo vault</button>
         <button type="button" class="secondary" data-action="unlock" ${state.busy ? "disabled" : ""}>Unlock vault</button>
         <button type="button" class="secondary" data-action="lock" ${state.busy ? "disabled" : ""}>Lock</button>
         <button type="button" class="secondary" data-action="disconnect" ${state.busy ? "disabled" : ""}>Disconnect</button>
-        <button type="button" class="secondary" data-action="demo-vault" ${state.busy ? "disabled" : ""}>Save demo vault</button>
+        <button type="button" class="secondary" data-action="connect" ${state.busy ? "disabled" : ""}>Try live Sainsbury’s connect</button>
       </div>
       ${
         state.connect
