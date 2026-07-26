@@ -1,0 +1,23 @@
+{
+  "name": "@gla/api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "milk:resolve": "tsx src/cli/milk-resolve.ts",
+    "milk:push": "tsx src/cli/milk-push.ts"
+  },
+  "dependencies": {
+    "@gla/shared": "workspace:*",
+    "@hono/node-server": "^1.13.7",
+    "hono": "^4.6.16"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

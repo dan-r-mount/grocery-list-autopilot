@@ -1,0 +1,16 @@
+{
+  "name": "grocery-list-autopilot",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "dev:api": "pnpm --filter @gla/api dev",
+    "dev:web": "pnpm --filter @gla/web dev",
+    "milk:resolve": "pnpm --filter @gla/api milk:resolve",
+    "milk:push": "pnpm --filter @gla/api milk:push",
+    "typecheck": "pnpm -r run typecheck"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
