@@ -416,6 +416,51 @@ async function createPairCode() {
   const origin = window.location.origin;
   state.message = `Pair code ${result.pair.code}. In Session Saver set Autopilot URL to ${origin}, enter this code + your passphrase, Open login, then Save session.`;
   render();
+  return result.pair.code;
+}
+
+/** One-tap: create pair code and hand off to Session Saver with autofill + auto login/save. */
+async function automateSainsburysConnect() {
+  if (state.vaultPassphrase.length < 8) {
+    state.message = "Set your vault passphrase (8+ characters) first — Session Saver will remember it after the first run.";
+    render();
+    return;
+  }
+  state.busy = true;
+  render();
+  try {
+    // Ensure APK is mentioned once
+    const code = await createPairCode();
+    const origin = window.location.origin;
+    const deepLink =
+      `autopilot://session-saver?api=${encodeURIComponent(origin)}` +
+      `&code=${encodeURIComponent(code)}` +
+      `&passphrase=${encodeURIComponent(state.vaultPassphrase)}` +
+      `&auto=1`;
+    // Chrome-friendly intent fallback with package name
+    const intentLink =
+      `intent://session-saver?api=${encodeURIComponent(origin)}` +
+      `&code=${encodeURIComponent(code)}` +
+      `&passphrase=${encodeURIComponent(state.vaultPassphrase)}` +
+      `&auto=1#Intent;` +
+      `scheme=autopilot;package=uk.autopilot.sessionsaver;` +
+      `S.browser_fallback_url=${encodeURIComponent(origin + "/download/session-saver.apk")};end`;
+
+    state.message =
+      `Opening Session Saver with pair code ${code}. Sign into Sainsbury’s once — the app will save the session automatically.`;
+    render();
+
+    // Prefer intent:// on Android Chrome
+    const ua = navigator.userAgent || "";
+    if (/Android/i.test(ua)) {
+      window.location.href = intentLink;
+    } else {
+      window.location.href = deepLink;
+    }
+  } finally {
+    state.busy = false;
+    render();
+  }
 }
 
 async function testNotify() {
@@ -560,25 +605,28 @@ function renderApp() {
         <button type="button" class="secondary" data-action="save-notify" ${state.busy ? "disabled" : ""}>Save settings</button>
       </div>
 
-      <h3 class="subhead">2. Phone login on this Pixel (recommended today)</h3>
-      <p class="meta">Chrome can’t export httpOnly cookies. Install the <strong>Session Saver</strong> app, generate a pair code here, log into Sainsbury’s inside the app, then tap Save session.</p>
-      <p class="meta">Autopilot URL to paste into the app: <code>${escapeHtml(window.location.origin)}</code></p>
-      <div class="toolbar">
-        <a class="button-link" href="/download/session-saver.apk">Download Session Saver APK</a>
-        <button type="button" data-action="pair-code" ${state.busy ? "disabled" : ""}>Generate pair code</button>
-      </div>
-      <p class="meta">Install the APK from Downloads (do not unzip it — an APK is already an install package). Allow “Install unknown apps” for Chrome if Android asks.</p>
+      <h3 class="subhead">2. Connect Sainsbury’s on this Pixel (automated)</h3>
+      <p class="meta">One install of Session Saver, then one tap here. The app opens Sainsbury’s login on your UK mobile IP and <strong>saves the session automatically</strong> after you sign in.</p>
+      <p class="meta">Autopilot URL: <code>${escapeHtml(window.location.origin)}</code></p>
       <label class="field">Vault passphrase
         <input data-field="vaultPassphrase" type="password" value="${escapeHtml(state.vaultPassphrase)}" placeholder="min 8 characters" autocomplete="new-password" />
       </label>
-      <label class="field">Or paste cookies manually (Cookie-Editor JSON / <code>a=b; c=d</code>)
-        <textarea data-field="cookieJson" rows="4" placeholder="Optional fallback if you already exported cookies">${escapeHtml(state.cookieJson)}</textarea>
-      </label>
       <div class="toolbar">
-        <button type="button" class="secondary" data-action="import-cookies" ${state.busy ? "disabled" : ""}>Import pasted cookies → vault</button>
+        <a class="button-link" href="/download/session-saver.apk">Install Session Saver (once)</a>
+        <button type="button" data-action="automate-connect" ${state.busy ? "disabled" : ""}>Automate Sainsbury’s connect</button>
+      </div>
+      <p class="meta">If Android unzipped the APK into lots of files before, delete that folder and use <strong>Install Session Saver</strong> again — open the .apk, don’t extract it.</p>
+      <div class="toolbar">
+        <button type="button" class="secondary" data-action="pair-code" ${state.busy ? "disabled" : ""}>Generate pair code only</button>
         <button type="button" class="secondary" data-action="unlock" ${state.busy ? "disabled" : ""}>Unlock vault</button>
         <button type="button" class="secondary" data-action="lock" ${state.busy ? "disabled" : ""}>Lock</button>
         <button type="button" class="secondary" data-action="disconnect" ${state.busy ? "disabled" : ""}>Disconnect</button>
+      </div>
+      <label class="field">Manual cookie paste (fallback)
+        <textarea data-field="cookieJson" rows="3" placeholder="Only if you already exported cookies">${escapeHtml(state.cookieJson)}</textarea>
+      </label>
+      <div class="toolbar">
+        <button type="button" class="secondary" data-action="import-cookies" ${state.busy ? "disabled" : ""}>Import pasted cookies → vault</button>
       </div>
 
       <h3 class="subhead">3. Live Connect browser (needs UK proxy on this host)</h3>
@@ -705,7 +753,8 @@ function bindActions() {
   app.querySelector('[data-action="test-notify"]')?.addEventListener("click", wrap(testNotify));
   app.querySelector('[data-action="probe"]')?.addEventListener("click", wrap(runProbe));
   app.querySelector('[data-action="import-cookies"]')?.addEventListener("click", wrap(importPhoneCookies));
-  app.querySelector('[data-action="pair-code"]')?.addEventListener("click", wrap(createPairCode));
+  app.querySelector('[data-action="pair-code"]')?.addEventListener("click", wrap(async () => { await createPairCode(); }));
+  app.querySelector('[data-action="automate-connect"]')?.addEventListener("click", wrap(automateSainsburysConnect));
   app.querySelector('[data-action="connect-type"]')?.addEventListener("click", wrap(sendConnectText));
   app.querySelector('[data-action="connect-save"]')?.addEventListener("click", wrap(saveConnectSession));
   app.querySelector('[data-action="dry-run"]')?.addEventListener("click", wrap(dryRunPush));
