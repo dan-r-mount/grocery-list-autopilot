@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Log into Sainsbury’s here (your UK mobile IP), then save the session to Autopilot."
+        android:textSize="14sp"
+        android:paddingBottom="8dp" />
+
+    <EditText
+        android:id="@+id/apiBase"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Autopilot URL"
+        android:inputType="textUri"
+        android:importantForAutofill="no" />
+
+    <EditText
+        android:id="@+id/pairCode"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Pair code from Autopilot"
+        android:inputType="textCapCharacters"
+        android:importantForAutofill="no" />
+
+    <EditText
+        android:id="@+id/passphrase"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Vault passphrase (8+ chars)"
+        android:inputType="textPassword" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
+
+        <Button
+            android:id="@+id/openLogin"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Open login" />
+
+        <Button
+            android:id="@+id/saveSession"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Save session" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Waiting…"
+        android:textSize="12sp"
+        android:paddingBottom="6dp" />
+
+    <WebView
+        android:id="@+id/webView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+</LinearLayout>

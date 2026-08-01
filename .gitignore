@@ -1,0 +1,16 @@
+.android-sdk/
+apps/session-saver-android/**/build/
+apps/session-saver-android/.gradle/
+apps/session-saver-android/local.properties
+coverage
+data/*
+!data/.gitkeep
+dist
+.DS_Store
+.env
+.env.*
+!.env.example
+*.log
+.next
+node_modules
+.turbo

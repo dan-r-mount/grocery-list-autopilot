@@ -1,0 +1,261 @@
+:root {
+  --ink: #14231a;
+  --muted: #4d6356;
+  --paper: #f3f7f1;
+  --leaf: #1f6b45;
+  --leaf-deep: #0f3d28;
+  --citrus: #d6e86a;
+  --warn: #8a4b12;
+  --line: rgba(20, 35, 26, 0.12);
+  font-family: "Source Sans 3", sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(214, 232, 106, 0.35), transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, rgba(31, 107, 69, 0.18), transparent 50%),
+    linear-gradient(180deg, #eef5eb 0%, #f7faf5 45%, #e8f0e4 100%);
+}
+
+#app {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+@media (min-width: 700px) {
+  #app {
+    padding: 2.5rem 1.25rem 4rem;
+  }
+}
+
+.brand {
+  font-family: "Fraunces", serif;
+  font-weight: 700;
+  font-size: clamp(2.2rem, 8vw, 3.6rem);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.75rem;
+  color: var(--leaf-deep);
+  animation: rise 480ms ease both;
+}
+
+.lede {
+  max-width: 36rem;
+  margin: 0 0 1.5rem;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin: 0.75rem 0 1.25rem;
+}
+
+button {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.8rem 1.15rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--leaf);
+  color: #f7fff5;
+  transition: transform 160ms ease, background 160ms ease;
+  min-height: 44px;
+}
+
+button:hover {
+  background: var(--leaf-deep);
+  transform: translateY(-1px);
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--leaf-deep);
+  box-shadow: inset 0 0 0 1.5px var(--leaf);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+  transform: none;
+}
+
+.grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 800px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+section h2,
+.panel h2 {
+  font-family: "Fraunces", serif;
+  font-size: 1.35rem;
+  margin: 0 0 0.85rem;
+}
+
+.panel {
+  margin-bottom: 1.5rem;
+  padding: 1rem 0 0.25rem;
+  border-top: 1px solid var(--line);
+  animation: rise 520ms ease both;
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+li {
+  padding: 0.95rem 1rem;
+  border-top: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(6px);
+}
+
+li strong {
+  display: block;
+  font-size: 1.05rem;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin-top: 0.25rem;
+}
+
+.warn-text {
+  color: var(--warn);
+}
+
+.status {
+  display: inline-block;
+  margin-top: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--leaf-deep);
+}
+
+.empty {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.banner {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.1rem;
+  background: linear-gradient(120deg, rgba(214, 232, 106, 0.55), rgba(255, 255, 255, 0.5));
+  border-left: 4px solid var(--leaf);
+  animation: rise 420ms ease both;
+  word-break: break-word;
+}
+
+.banner.warn {
+  border-left-color: var(--warn);
+  background: linear-gradient(120deg, rgba(255, 214, 170, 0.65), rgba(255, 255, 255, 0.5));
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.75rem 0;
+  font-weight: 600;
+  color: var(--leaf-deep);
+}
+
+.field input {
+  font: inherit;
+  font-weight: 400;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--ink);
+  min-height: 48px;
+}
+
+.live-view {
+  display: block;
+  width: 100%;
+  max-width: 390px;
+  margin: 0.75rem 0;
+  border-radius: 18px;
+  box-shadow: 0 18px 40px rgba(15, 61, 40, 0.18);
+  touch-action: manipulation;
+  cursor: crosshair;
+  background: #111;
+}
+
+.subhead {
+  font-family: "Fraunces", serif;
+  font-size: 1.05rem;
+  margin: 1.25rem 0 0.5rem;
+  color: var(--leaf-deep);
+}
+
+textarea {
+  font: inherit;
+  font-weight: 400;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--ink);
+  width: 100%;
+  resize: vertical;
+}
+
+a.button-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.8rem 1.15rem;
+  border-radius: 999px;
+  background: var(--leaf);
+  color: #f7fff5;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+footer {
+  margin-top: 2.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+code {
+  font-size: 0.9em;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
