@@ -36,7 +36,7 @@ For Pixel testing against a home server, use the Cloudflare tunnel helper (see b
 
 ## Sainsbury’s — secure connect (no stored password)
 
-Sainsbury’s has no OAuth for personal third-party apps. The secure pattern is:
+Sainsbury’s has no OAuth for personal third-party apps. **Preferred model:** a persistent Chromium profile on a machine you own — sign in once, never export session material ([AUTH_OPTIONS.md](./AUTH_OPTIONS.md)). The cookie-capture flow below is the cloud-demo fallback:
 
 ```text
 Tap “Connect Sainsbury’s” on Pixel

@@ -43,6 +43,15 @@ import {
 import { parseCookieInput } from "./sainsburys/cookie-parse.js";
 import { createDevicePair, consumeDevicePair, peekDevicePair } from "./sainsburys/device-pair.js";
 import { probeSainsburysReachability } from "./sainsburys/probe.js";
+import {
+  finishProfileLogin,
+  forgetProfile,
+  profileLoginSnapshot,
+  profileLoginTap,
+  profileLoginType,
+  profileStatus,
+  startProfileLogin,
+} from "./sainsburys/profile.js";
 
 const services = await createDefaultServices();
 const app = new Hono();
@@ -238,6 +247,72 @@ app.get("/api/sainsburys/status", (c) => {
     return c.json(vaultStatus());
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : String(err) }, 401);
+  }
+});
+
+app.get("/api/sainsburys/profile", async (c) => {
+  try {
+    requireUser(c);
+    return c.json(await profileStatus());
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 401);
+  }
+});
+
+app.post("/api/sainsburys/profile/login", async (c) => {
+  try {
+    requireUser(c);
+    return c.json(await startProfileLogin());
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 400);
+  }
+});
+
+app.get("/api/sainsburys/profile/login", async (c) => {
+  try {
+    requireUser(c);
+    return c.json(await profileLoginSnapshot());
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 400);
+  }
+});
+
+app.post("/api/sainsburys/profile/login/tap", async (c) => {
+  try {
+    requireUser(c);
+    const body = await c.req.json<{ x: number; y: number }>();
+    return c.json(await profileLoginTap(body.x, body.y));
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 400);
+  }
+});
+
+app.post("/api/sainsburys/profile/login/type", async (c) => {
+  try {
+    requireUser(c);
+    const body = await c.req.json<{ text: string; submit?: boolean }>();
+    return c.json(await profileLoginType(body.text, body.submit));
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 400);
+  }
+});
+
+app.post("/api/sainsburys/profile/login/finish", async (c) => {
+  try {
+    requireUser(c);
+    return c.json(await finishProfileLogin());
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 400);
+  }
+});
+
+app.post("/api/sainsburys/profile/forget", async (c) => {
+  try {
+    requireUser(c);
+    await forgetProfile();
+    return c.json({ ok: true, profile: await profileStatus() });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 400);
   }
 });
 

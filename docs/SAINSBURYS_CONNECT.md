@@ -24,6 +24,12 @@ Weekly basket API calls after login must use the **same class of UK egress**, or
 
 ## Supported Connect modes (product)
 
+### A0. Persistent browser profile — recommended
+
+Autopilot keeps its own Chromium profile (`data/browser-profile`). You sign in once inside it; the session then behaves like any everyday browser session — cookies rotate in place and nothing is exported. Run this on a UK home machine and the geo gate disappears.
+
+Full comparison of auth approaches: [AUTH_OPTIONS.md](./AUTH_OPTIONS.md).
+
 ### A. Server Connect + UK proxy (production default for always-on hosts)
 
 1. Configure a **UK residential/mobile proxy** in Settings (sticky session).

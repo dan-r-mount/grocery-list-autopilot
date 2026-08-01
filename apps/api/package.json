@@ -9,7 +9,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "milk:resolve": "tsx src/cli/milk-resolve.ts",
     "milk:push": "tsx src/cli/milk-push.ts",
-    "test:vault": "tsx src/cli/test-vault.ts"
+    "test:vault": "tsx src/cli/test-vault.ts",
+    "test:profile": "tsx src/cli/test-profile.ts"
   },
   "dependencies": {
     "@gla/shared": "workspace:*",

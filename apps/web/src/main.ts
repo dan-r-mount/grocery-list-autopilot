@@ -40,6 +40,22 @@ type AppSettings = {
   sainsburysProxyUrl: string;
 };
 
+type ProfileStatus = {
+  mode: "persistent_profile";
+  exists: boolean;
+  loggedIn: boolean;
+  proxyConfigured: boolean;
+  error: string | null;
+};
+
+type ProfileLogin = {
+  id: string;
+  status: string;
+  error: string | null;
+  pageUrl: string | null;
+  screenshotDataUrl: string | null;
+};
+
 type Reachability = {
   ok: boolean;
   status: number | null;
@@ -94,6 +110,9 @@ const state: {
   sainsburysProxyUrl: string;
   cookieJson: string;
   probe: Reachability | null;
+  profile: ProfileStatus | null;
+  profileLogin: ProfileLogin | null;
+  profileTimer: number | null;
   connectId: string | null;
   connect: ConnectSnapshot | null;
   typeBuffer: string;
@@ -113,6 +132,9 @@ const state: {
   sainsburysProxyUrl: "",
   cookieJson: "",
   probe: null,
+  profile: null,
+  profileLogin: null,
+  profileTimer: null,
   connectId: null,
   connect: null,
   typeBuffer: "",
@@ -154,6 +176,11 @@ async function refreshApp() {
   state.items = list.items;
   state.resolutions = resolutions.resolutions;
   state.runs = runs.runs;
+  try {
+    state.profile = await api<ProfileStatus>("/api/sainsburys/profile");
+  } catch {
+    state.profile = null;
+  }
   await refreshAuth();
 }
 
@@ -378,6 +405,81 @@ async function saveNotifySettings() {
   await refreshAll();
 }
 
+function stopProfilePoll() {
+  if (state.profileTimer) {
+    window.clearInterval(state.profileTimer);
+    state.profileTimer = null;
+  }
+}
+
+async function startProfileLogin() {
+  state.busy = true;
+  render();
+  try {
+    state.profileLogin = await api<ProfileLogin>("/api/sainsburys/profile/login", {
+      method: "POST",
+      body: "{}",
+    });
+    state.message =
+      "Sign in to Sainsbury’s in the view below. The session stays inside Autopilot’s own browser profile — nothing is exported.";
+    stopProfilePoll();
+    state.profileTimer = window.setInterval(() => {
+      void pollProfileLogin();
+    }, 1500);
+  } finally {
+    state.busy = false;
+    render();
+  }
+}
+
+async function pollProfileLogin() {
+  try {
+    state.profileLogin = await api<ProfileLogin>("/api/sainsburys/profile/login");
+    if (state.profileLogin.status === "logged_in") {
+      stopProfilePoll();
+      await api("/api/sainsburys/profile/login/finish", { method: "POST", body: "{}" });
+      state.profileLogin = null;
+      state.message = "Signed in. Sainsbury’s session is held in Autopilot’s persistent profile.";
+      await refreshAll();
+      return;
+    }
+    render();
+  } catch {
+    // transient
+  }
+}
+
+async function profileTap(event: MouseEvent) {
+  const img = event.currentTarget as HTMLImageElement;
+  const rect = img.getBoundingClientRect();
+  const x = (event.clientX - rect.left) / rect.width;
+  const y = (event.clientY - rect.top) / rect.height;
+  state.profileLogin = await api<ProfileLogin>("/api/sainsburys/profile/login/tap", {
+    method: "POST",
+    body: JSON.stringify({ x, y }),
+  });
+  render();
+}
+
+async function profileType() {
+  if (!state.typeBuffer) return;
+  state.profileLogin = await api<ProfileLogin>("/api/sainsburys/profile/login/type", {
+    method: "POST",
+    body: JSON.stringify({ text: state.typeBuffer, submit: false }),
+  });
+  state.typeBuffer = "";
+  render();
+}
+
+async function forgetProfile() {
+  if (!confirm("Delete Autopilot’s Sainsbury’s browser profile and sign out?")) return;
+  await api("/api/sainsburys/profile/forget", { method: "POST", body: "{}" });
+  stopProfilePoll();
+  state.profileLogin = null;
+  state.message = "Browser profile deleted — Sainsbury’s session removed.";
+  await refreshAll();
+}
+
 async function runProbe() {
   state.busy = true;
   render();
@@ -587,10 +689,39 @@ function renderApp() {
     <section class="panel">
       <h2>Sainsbury’s connect</h2>
       <p class="meta">Vault: ${sb?.hasVault ? "present" : "empty"} · ${sb?.unlocked ? "unlocked" : "locked"}${sb?.label ? ` · ${escapeHtml(sb.label)}` : ""}</p>
-      <div class="banner warn">Sainsbury’s blocks non-UK / datacenter IPs (Akamai). This demo host is in the US, so live Connect must use a <strong>UK residential/mobile proxy</strong>, or you log in on this Pixel and import cookies (your real UK mobile IP).</div>
+      <div class="banner warn">Sainsbury’s has no consumer API, so authentication means “a browser you control, signed in as you”. The recommended setup keeps that browser on a machine you own in the UK. Exporting cookies to a cloud host is the last-resort path — see <code>docs/AUTH_OPTIONS.md</code>.</div>
       <div class="toolbar">
         <button type="button" class="secondary" data-action="probe" ${state.busy ? "disabled" : ""}>Test Sainsbury’s reachability</button>
       </div>
+
+      <h3 class="subhead">Recommended: Autopilot’s own browser profile</h3>
+      <p class="meta">You log in once inside Autopilot’s persistent Chromium profile. No password is stored, no cookies are exported, and the session refreshes itself like a normal browser. Run Autopilot on a UK home machine and the Akamai geo gate stops being an issue.</p>
+      <p class="meta">Profile: ${state.profile?.exists ? "created" : "not created"} · ${state.profile?.loggedIn ? "signed in to Sainsbury’s" : "signed out"}${state.profile?.proxyConfigured ? " · via UK proxy" : ""}</p>
+      ${state.profile?.error ? `<p class="meta warn-text">${escapeHtml(state.profile.error)}</p>` : ""}
+      <div class="toolbar">
+        <button type="button" data-action="profile-login" ${state.busy ? "disabled" : ""}>${state.profile?.loggedIn ? "Re-authenticate" : "Sign in to Sainsbury’s"}</button>
+        <button type="button" class="secondary" data-action="profile-forget" ${state.busy ? "disabled" : ""}>Delete profile</button>
+      </div>
+      ${
+        state.profileLogin
+          ? `<div class="connect">
+              <p class="meta">Status: ${escapeHtml(state.profileLogin.status)}${state.profileLogin.pageUrl ? ` · ${escapeHtml(state.profileLogin.pageUrl)}` : ""}</p>
+              ${state.profileLogin.error ? `<p class="meta warn-text">${escapeHtml(state.profileLogin.error)}</p>` : ""}
+              ${
+                state.profileLogin.screenshotDataUrl
+                  ? `<img class="live-view" alt="Sainsbury's login" src="${state.profileLogin.screenshotDataUrl}" data-action="profile-tap" />`
+                  : `<p class="empty">Waiting for the login page…</p>`
+              }
+              <label class="field">Type into the page
+                <input data-field="typeBuffer" value="${escapeHtml(state.typeBuffer)}" placeholder="email / password / MFA code" />
+              </label>
+              <div class="toolbar">
+                <button type="button" class="secondary" data-action="profile-type" ${state.busy ? "disabled" : ""}>Send text</button>
+              </div>
+              <p class="meta">Autopilot saves nothing here — when login succeeds the browser profile simply stays signed in.</p>
+            </div>`
+          : ""
+      }
       ${
         state.probe
           ? `<p class="meta">Probe: HTTP ${state.probe.status ?? "—"} · server ${escapeHtml(state.probe.serverEgress.country ?? "?")} ${escapeHtml(state.probe.serverEgress.ip ?? "")} · proxy ${state.probe.proxyConfigured ? "configured" : "not set"} · ${state.probe.sainsburys.blockedByAkamai ? "Akamai blocked" : state.probe.ok ? "reachable" : "not reachable"}</p>`
@@ -605,7 +736,7 @@ function renderApp() {
         <button type="button" class="secondary" data-action="save-notify" ${state.busy ? "disabled" : ""}>Save settings</button>
       </div>
 
-      <h3 class="subhead">2. Connect Sainsbury’s on this Pixel (automated)</h3>
+      <h3 class="subhead">2. Fallback: connect from this Pixel (cloud demo only)</h3>
       <p class="meta">One install of Session Saver, then one tap here. The app opens Sainsbury’s login on your UK mobile IP and <strong>saves the session automatically</strong> after you sign in.</p>
       <p class="meta">Autopilot URL: <code>${escapeHtml(window.location.origin)}</code></p>
       <label class="field">Vault passphrase
@@ -752,6 +883,15 @@ function bindActions() {
   app.querySelector('[data-action="save-notify"]')?.addEventListener("click", wrap(saveNotifySettings));
   app.querySelector('[data-action="test-notify"]')?.addEventListener("click", wrap(testNotify));
   app.querySelector('[data-action="probe"]')?.addEventListener("click", wrap(runProbe));
+  app.querySelector('[data-action="profile-login"]')?.addEventListener("click", wrap(startProfileLogin));
+  app.querySelector('[data-action="profile-type"]')?.addEventListener("click", wrap(profileType));
+  app.querySelector('[data-action="profile-forget"]')?.addEventListener("click", wrap(forgetProfile));
+  app.querySelector('[data-action="profile-tap"]')?.addEventListener("click", (event) => {
+    void profileTap(event as MouseEvent).catch((err) => {
+      state.message = err instanceof Error ? err.message : String(err);
+      render();
+    });
+  });
   app.querySelector('[data-action="import-cookies"]')?.addEventListener("click", wrap(importPhoneCookies));
   app.querySelector('[data-action="pair-code"]')?.addEventListener("click", wrap(async () => { await createPairCode(); }));
   app.querySelector('[data-action="automate-connect"]')?.addEventListener("click", wrap(automateSainsburysConnect));

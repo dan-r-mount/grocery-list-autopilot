@@ -2,6 +2,12 @@
 
 Lightweight ADR-style notes. Newest first.
 
+## 2026-08-01 — Persistent browser profile is the primary auth model
+
+**Context:** Sainsbury’s has no consumer OAuth; exporting a cookie jar to a cloud host makes a bearer credential portable and puts it on hardware the household doesn’t own.  
+**Decision:** Default to a long-lived Chromium profile on a self-hosted UK machine — log in once, never export session material. Proxy mode reuses the same profile; encrypted cookie import is demoted to a cloud-demo fallback.  
+**Consequences:** Needs an always-on home machine; profile directory is sensitive (0700 + disk encryption). See [AUTH_OPTIONS.md](./AUTH_OPTIONS.md).
+
 ## 2026-07-26 — Work through Sainsbury’s Akamai, don’t bypass with demo vault
 
 **Context:** US/cloud IPs get HTTP 403 Access Denied before login; demo vault is not a substitute.  
